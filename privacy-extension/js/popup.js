@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryList = document.getElementById('summary-list');
     const redFlagsList = document.getElementById('red-flags-list');
     const errorMessage = document.getElementById('error-message');
+    
+    // Loading spinner and message
+    const loadingStatus = document.getElementById('loading-status');
 
     // Example URL items 
     const exampleItems = document.querySelectorAll('.examples li');
@@ -65,19 +68,71 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Please enter a valid URL');
             return;
         }
+        
         // Show loading view 
         showView(loadingView);
+        
+        // Update loading status with more details
+        updateLoadingStatus('Sending request to analyze privacy policy...');
+        
+        // Track request time for UX feedback
+        const startTime = Date.now();
+        
         // Send analysis request to background script 
         chrome.runtime.sendMessage({ action: 'analyzePolicy', url }, (response) => {
-            if (response.success) {
-                // Display the results 
-                displayResults(response.data);
-            } else {
-                // Show error 
-                errorMessage.textContent = response.error || 'Failed to analyze the privacy policy.';
+            // Ensure minimum of 1.5 seconds of loading for better UX
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = Math.max(0, 1500 - elapsedTime);
+            
+            setTimeout(() => {
+                if (response.success) {
+                    // Display the results 
+                    displayResults(response.data);
+                } else {
+                    // Show error with detailed information
+                    const errorDetails = response.error || 'Failed to analyze the privacy policy.';
+                    const urlInfo = response.url ? `URL: ${response.url}` : '';
+                    
+                    errorMessage.innerHTML = `
+                        <div>${errorDetails}</div>
+                        ${urlInfo ? `<div class="error-url">${urlInfo}</div>` : ''}
+                        <div class="error-tips">
+                            <p>Possible solutions:</p>
+                            <ul>
+                                <li>Check if the URL is a valid privacy policy page</li>
+                                <li>Ensure the backend server is running at http://localhost:3000</li>
+                                <li>Try using one of the example URLs below</li>
+                            </ul>
+                        </div>
+                    `;
+                    
+                    showView(errorView);
+                }
+            }, remainingTime);
+        });
+        
+        // Set a timeout in case the background script doesn't respond
+        setTimeout(() => {
+            // Check if we're still in loading view after 30 seconds
+            if (!initialView.classList.contains('hidden') && 
+                !resultsView.classList.contains('hidden') && 
+                !errorView.classList.contains('hidden')) {
+                
+                errorMessage.innerHTML = `
+                    <div>Request timed out. The server took too long to respond.</div>
+                    <div class="error-tips">
+                        <p>Possible solutions:</p>
+                        <ul>
+                            <li>Check if the backend server is running</li>
+                            <li>The policy might be too large to process</li>
+                            <li>Try again or use one of the example URLs</li>
+                        </ul>
+                    </div>
+                `;
+                
                 showView(errorView);
             }
-        });
+        }, 30000);
     });
 
     // Handle back button clicks 
@@ -100,6 +155,13 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Unable to view full report. Please try analyzing the policy again.');
         }
     });
+    
+    // Function to update loading status
+    function updateLoadingStatus(message) {
+        if (loadingStatus) {
+            loadingStatus.textContent = message;
+        }
+    }
 
     // Function to display results 
     function displayResults(data) {
@@ -134,33 +196,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Set the summary 
         summaryList.innerHTML = '';
-        const summaryPoints = JSON.parse(policy.summary);
+        
+        try {
+            const summaryPoints = typeof policy.summary === 'string' 
+                ? JSON.parse(policy.summary) 
+                : policy.summary;
 
-        // Limit to 5 points for popup view 
-        const limitedSummary = summaryPoints.slice(0, 5);
-        limitedSummary.forEach(point => {
+            // Limit to 5 points for popup view 
+            const limitedSummary = summaryPoints.slice(0, 5);
+            limitedSummary.forEach(point => {
+                const li = document.createElement('li');
+                li.textContent = point;
+                summaryList.appendChild(li);
+            });
+        } catch (error) {
+            console.error('Error parsing summary:', error);
             const li = document.createElement('li');
-            li.textContent = point;
+            li.textContent = 'Error displaying summary. See full report for details.';
             summaryList.appendChild(li);
-        });
+        }
 
         // Set the red flags 
         redFlagsList.innerHTML = '';
-        const redFlags = JSON.parse(policy.red_flags);
+        
+        try {
+            const redFlags = typeof policy.red_flags === 'string' 
+                ? JSON.parse(policy.red_flags) 
+                : policy.red_flags;
 
-        if (redFlags && redFlags.length > 0) {
-            // Limit to 3 red flags for popup view 
-            const limitedFlags = redFlags.slice(0, 3);
-            limitedFlags.forEach(flag => {
+            if (redFlags && redFlags.length > 0) {
+                // Limit to 3 red flags for popup view 
+                const limitedFlags = redFlags.slice(0, 3);
+                limitedFlags.forEach(flag => {
+                    const div = document.createElement('div');
+                    div.className = 'red-flag-item';
+                    div.textContent = flag;
+                    redFlagsList.appendChild(div);
+                });
+            } else {
                 const div = document.createElement('div');
-                div.className = 'red-flag-item';
-                div.textContent = flag;
+                div.className = 'no-flags';
+                div.textContent = 'No significant red flags detected.';
                 redFlagsList.appendChild(div);
-            });
-        } else {
+            }
+        } catch (error) {
+            console.error('Error parsing red flags:', error);
             const div = document.createElement('div');
-            div.className = 'no-flags';
-            div.textContent = 'No significant red flags detected.';
+            div.className = 'red-flag-item';
+            div.textContent = 'Error displaying red flags. See full report for details.';
             redFlagsList.appendChild(div);
         }
 

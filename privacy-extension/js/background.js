@@ -47,13 +47,21 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 // Listen for messages from the popup or content scripts 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "analyzePolicy") {
+        console.log(`Analyzing policy: ${message.url}`);
+
         // Forward the analyze request to the API 
         analyzePrivacyPolicy(message.url)
             .then(result => {
+                console.log("Analysis completed successfully");
                 sendResponse({ success: true, data: result });
             })
             .catch(error => {
-                sendResponse({ success: false, error: error.message });
+                console.error("Analysis failed:", error);
+                sendResponse({
+                    success: false,
+                    error: error.message,
+                    url: message.url
+                });
             });
 
         // Return true to indicate we'll respond asynchronously 
@@ -64,26 +72,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Function to analyze a privacy policy 
 async function analyzePrivacyPolicy(url) {
     try {
-        // Replace with your deployed API URL in production 
-        const apiUrl = "http://localhost:3000/api/policies/analyze";
+        // Get API URL from options or use default
+        const options = await chrome.storage.sync.get({
+            useCustomApi: false,
+            customApiUrl: 'http://localhost:3000/api/policies/analyze'
+        });
+
+        const apiUrl = options.useCustomApi ? options.customApiUrl : "http://localhost:3000/api/policies/analyze";
+
+        console.log(`Making API request to: ${apiUrl}`);
 
         const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ url })
+            body: JSON.stringify({ url }),
+            // Adding a longer timeout
+            signal: AbortSignal.timeout(30000) // 30 second timeout
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to analyze policy");
+            let errorMessage = `Failed to analyze policy: Server responded with status ${response.status}`;
+
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+                // If JSON parsing fails, use the status text
+                errorMessage = `Server error: ${response.statusText || 'Unknown error'}`;
+            }
+
+            throw new Error(errorMessage);
         }
 
         const data = await response.json();
         return data;
     } catch (error) {
         console.error("Error analyzing policy:", error);
+        // Add the URL to the error for better debugging
+        error.message = `Failed to analyze ${url}: ${error.message}`;
         throw error;
     }
 }

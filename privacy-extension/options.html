@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Privacy Policy Reader Options</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                Helvetica, Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #334155;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #1e293b;
+        }
+
+        .option-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+
+        .option-group h2 {
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #334155;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+
+        .save-message {
+            color: #10b981;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Smart Privacy Policy Reader Options</h1>
+    <div class="option-group">
+        <h2>General Settings</h2>
+        <label>
+            <input type="checkbox" id="show-floating-button">
+            Show floating "Analyze" button on privacy policy pages
+        </label>
+        <input type="checkbox" id="show-badge">
+        Show notification badge when a privacy policy is detected
+        <label>
+        </label>
+    </div>
+    <div class="option-group">
+        <h2>API Settings</h2>
+        <label>
+            <input type="checkbox" id="use-custom-api">
+            Use custom API endpoint
+        </label>
+
+        <div id="custom-api-container" style="margin-top: 10px; display: none;">
+            <input type="text" id="custom-api-url" placeholder="https://your
+api.com/analyze" style="width: 100%; padding: 8px; margin-bottom: 5px;">
+            <div style="font-size: 12px; color: #64748b;">
+                Default: http://localhost:3000/api/policies/analyze
+            </div>
+        </div>
+    </div>
+
+    <button id="save-button">Save Options</button>
+    <div id="save-message" class="save-message">Options saved!</div>
+
+    <script src="js/options.js"></script>
+</body>
+
+</html>

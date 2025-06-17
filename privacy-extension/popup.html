@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Privacy Policy Reader</title>
+    <link rel="stylesheet" href="css/popup.css">
+</head>
+
+<body>
+    <div class="popup-container">
+        <header class="header">
+            <div class="logo">
+                <img src="images/icon48.png" alt="Logo">
+                <h1>Smart Privacy Policy Reader</h1>
+            </div>
+        </header>
+        <div class="content">
+            <!-- Initial view - shown when first opened -->
+            <div id="initial-view">
+                <div class="policy-detection-message" id="policy-detection-message">
+                    <!-- Will be filled dynamically -->
+                </div>
+                <div class="url-input-container">
+                    <input type="text" id="policy-url" placeholder="https://example.com/privacy">
+                    <button id="analyze-button">Analyze</button>
+                </div>
+                <div class="examples">
+                    <h3>Examples:</h3>
+                    <ul>
+                        <li data-url="https://www.facebook.com/privacy/policy/">Facebook</li>
+                        <li data-url="https://policies.google.com/privacy">Google</li>
+                        <li data-url="https://twitter.com/privacy">Twitter</li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Loading view - shown during analysis -->
+            <div id="loading-view" class="hidden">
+                <div class="spinner"></div>
+                <p>Analyzing privacy policy...</p>
+            </div>
+            <!-- Results view - shown after analysis -->
+            <div id="results-view" class="hidden">
+                <div class="results-header">
+                    <button id="back-button">Back</button>
+                    <h2>Analysis Results</h2>
+                </div>
+                <div class="privacy-score">
+                    <div class="score-circle" id="score-circle">
+                        <span id="score-value">0</span>
+                    </div>
+                    <span id="score-label">Score</span>
+                </div>
+                <div class="summary-section">
+                    <h3>Summary</h3>
+                    <ul id="summary-list"></ul>
+                </div>
+                <div class="red-flags-section">
+                    <h3>Red Flags</h3>
+                    <div id="red-flags-list"></div>
+                </div>
+                <button id="view-full-report-button" class="full-report-button">
+                    View Full Report
+                </button>
+            </div>
+            <!-- Error view - shown on error -->
+            <div id="error-view" class="hidden">
+                <div class="error-icon">⚠️</div>
+                <h3>Analysis Failed</h3>
+                <p id="error-message">Unable to analyze this privacy policy.</p>
+                <button id="error-back-button">Try Again</button>
+            </div>
+        </div>
+        <p>Educational tool only. Not legal advice.</p>
+        <footer class="footer">
+        </footer>
+    </div>
+
+    <script src="js/popup.js"></script>
+</body>
+
+</html>

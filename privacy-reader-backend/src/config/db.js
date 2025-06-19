@@ -1,13 +1,14 @@
+// src/config/db.js
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Handle special characters in the password
+// Use explicit parameters instead of connection string
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'privacy_reader',
-  password: 'Yasindu20$', // Replace with your actual password
-  port: 5432,
+  password: 'yasindu20', // Your new simple password
+  port: 5432
 });
 
 // Log connection status

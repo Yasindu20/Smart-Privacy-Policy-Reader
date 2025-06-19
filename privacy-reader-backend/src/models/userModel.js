@@ -1,10 +1,7 @@
 // src/models/userModel.js
-const { Pool } = require('pg');
+const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const { logger } = require('../middleware/errorHandler');
-
-// Create a PostgreSQL connection pool
-const pool = new Pool();
 
 /**
  * User model for authentication and user management
@@ -27,7 +24,7 @@ const userModel = {
         ) RETURNING id, email, name, company, api_key, plan, role, created_at
       `;
       
-      const result = await pool.query(query, [
+      const result = await db.query(query, [
         userData.email.toLowerCase(),
         hashedPassword,
         userData.name,
@@ -65,7 +62,7 @@ const userModel = {
         WHERE email = $1
       `;
       
-      const result = await pool.query(query, [email.toLowerCase()]);
+      const result = await db.query(query, [email.toLowerCase()]);
       
       if (result.rows.length === 0) {
         return null;
@@ -101,7 +98,7 @@ const userModel = {
         WHERE id = $1
       `;
       
-      const result = await pool.query(query, [id]);
+      const result = await db.query(query, [id]);
       
       if (result.rows.length === 0) {
         return null;
@@ -137,7 +134,7 @@ const userModel = {
         WHERE api_key = $1
       `;
       
-      const result = await pool.query(query, [apiKey]);
+      const result = await db.query(query, [apiKey]);
       
       if (result.rows.length === 0) {
         return null;
@@ -175,7 +172,7 @@ const userModel = {
         RETURNING id, email, name, company, api_key, plan, role, created_at
       `;
       
-      const result = await pool.query(query, [
+      const result = await db.query(query, [
         profileData.name,
         profileData.company,
         userId
@@ -219,7 +216,7 @@ const userModel = {
         RETURNING id
       `;
       
-      const result = await pool.query(query, [
+      const result = await db.query(query, [
         hashedPassword,
         userId
       ]);
@@ -243,7 +240,7 @@ const userModel = {
         RETURNING id
       `;
       
-      const result = await pool.query(query, [
+      const result = await db.query(query, [
         apiKey,
         userId
       ]);
@@ -267,7 +264,7 @@ const userModel = {
         RETURNING id, email, plan
       `;
       
-      const result = await pool.query(query, [
+      const result = await db.query(query, [
         plan,
         userId
       ]);
@@ -296,7 +293,7 @@ const userModel = {
         )
       `;
       
-      await pool.query(query, [
+      await db.query(query, [
         userId,
         activity,
         JSON.stringify(data)
@@ -323,7 +320,7 @@ const userModel = {
         LIMIT $2 OFFSET $3
       `;
       
-      const result = await pool.query(query, [
+      const result = await db.query(query, [
         userId,
         limit,
         offset
@@ -354,7 +351,7 @@ const userModel = {
         WHERE id = $3
       `;
       
-      await pool.query(updateQuery, [
+      await db.query(updateQuery, [
         endpoint,
         success ? 1 : 0,
         userId
@@ -382,7 +379,7 @@ const userModel = {
       logger.info('Initializing user database schema...');
       
       // Create users table
-      await pool.query(`
+      await db.query(`
         CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
           email TEXT UNIQUE NOT NULL,
@@ -399,17 +396,17 @@ const userModel = {
       `);
       
       // Create index on email for faster lookups
-      await pool.query(`
+      await db.query(`
         CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)
       `);
       
       // Create index on API key for faster lookups
-      await pool.query(`
+      await db.query(`
         CREATE INDEX IF NOT EXISTS idx_users_api_key ON users (api_key)
       `);
       
       // Create user activity table
-      await pool.query(`
+      await db.query(`
         CREATE TABLE IF NOT EXISTS user_activity (
           id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES users(id),
@@ -420,12 +417,12 @@ const userModel = {
       `);
       
       // Create index on user ID for faster lookups
-      await pool.query(`
+      await db.query(`
         CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity (user_id)
       `);
       
       // Create index on activity for faster lookups
-      await pool.query(`
+      await db.query(`
         CREATE INDEX IF NOT EXISTS idx_user_activity_activity ON user_activity (activity)
       `);
       

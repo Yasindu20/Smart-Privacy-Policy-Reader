@@ -1,9 +1,6 @@
 // src/models/policyModel.js
-const { Pool } = require('pg');
+const db = require('../config/db');
 const { logger } = require('../middleware/errorHandler');
-
-// Create a PostgreSQL connection pool
-const pool = new Pool();
 
 /**
  * Policy database model
@@ -19,7 +16,7 @@ const policyModel = {
         WHERE id = $1
       `;
       
-      const result = await pool.query(query, [id]);
+      const result = await db.query(query, [id]);
       
       return result.rows[0] || null;
     } catch (error) {
@@ -40,7 +37,7 @@ const policyModel = {
         LIMIT 1
       `;
       
-      const result = await pool.query(query, [url]);
+      const result = await db.query(query, [url]);
       
       return result.rows[0] || null;
     } catch (error) {
@@ -60,7 +57,7 @@ const policyModel = {
         WHERE id = $1
       `;
       
-      const policyResult = await pool.query(policyQuery, [id]);
+      const policyResult = await db.query(policyQuery, [id]);
       
       if (policyResult.rows.length === 0) {
         return [];
@@ -77,7 +74,7 @@ const policyModel = {
         ORDER BY created_at DESC
       `;
       
-      const historyResult = await pool.query(historyQuery, [url]);
+      const historyResult = await db.query(historyQuery, [url]);
       
       return historyResult.rows;
     } catch (error) {
@@ -99,7 +96,7 @@ const policyModel = {
         ORDER BY last_checked DESC
       `;
       
-      const result = await pool.query(query, [`%${domain}%`]);
+      const result = await db.query(query, [`%${domain}%`]);
       
       return result.rows;
     } catch (error) {
@@ -150,7 +147,7 @@ const policyModel = {
           ) RETURNING id
         `;
         
-        const insertResult = await pool.query(insertQuery, [
+        const insertResult = await db.query(insertQuery, [
           policyData.url,
           policyData.domain,
           policyData.title,
@@ -192,7 +189,7 @@ const policyModel = {
             ) RETURNING id
           `;
           
-          const insertResult = await pool.query(insertVersionQuery, [
+          const insertResult = await db.query(insertVersionQuery, [
             policyData.url,
             policyData.domain,
             policyData.title,
@@ -229,7 +226,7 @@ const policyModel = {
             RETURNING id
           `;
           
-          const updateResult = await pool.query(updateQuery, [existingPolicy.id]);
+          const updateResult = await db.query(updateQuery, [existingPolicy.id]);
           
           policyId = updateResult.rows[0].id;
           isNew = false;
@@ -256,7 +253,7 @@ const policyModel = {
         )
       `;
       
-      await pool.query(query, [
+      await db.query(query, [
         data.url,
         data.policyId || null,
         data.userId || null,
@@ -286,7 +283,7 @@ const policyModel = {
         )
       `;
       
-      await pool.query(query, [
+      await db.query(query, [
         event,
         JSON.stringify(data)
       ]);
@@ -307,7 +304,7 @@ const policyModel = {
       logger.info('Initializing database schema...');
       
       // Create policies table
-      await pool.query(`
+      await db.query(`
         CREATE TABLE IF NOT EXISTS policies (
           id SERIAL PRIMARY KEY,
           url TEXT NOT NULL,
@@ -329,17 +326,17 @@ const policyModel = {
       `);
       
       // Create index on URL for faster lookups
-      await pool.query(`
+      await db.query(`
         CREATE INDEX IF NOT EXISTS idx_policies_url ON policies (url)
       `);
       
       // Create index on domain for faster lookups
-      await pool.query(`
+      await db.query(`
         CREATE INDEX IF NOT EXISTS idx_policies_domain ON policies (domain)
       `);
       
       // Create policy requests table for analytics
-      await pool.query(`
+      await db.query(`
         CREATE TABLE IF NOT EXISTS policy_requests (
           id SERIAL PRIMARY KEY,
           url TEXT NOT NULL,
@@ -353,7 +350,7 @@ const policyModel = {
       `);
       
       // Create analytics events table
-      await pool.query(`
+      await db.query(`
         CREATE TABLE IF NOT EXISTS analytics_events (
           id SERIAL PRIMARY KEY,
           event_type TEXT NOT NULL,

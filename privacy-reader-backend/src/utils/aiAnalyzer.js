@@ -1,48 +1,41 @@
 // src/utils/aiAnalyzer.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { OpenAI } = require('openai');
 const { logger } = require('../middleware/errorHandler');
 const cache = require('./cacheManager');
 
-// Initialize AI providers
+// Initialize Gemini AI provider
 const genAI = process.env.GEMINI_API_KEY 
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  : null;
-
 /**
- * AI-based privacy policy analyzer with multi-provider support
+ * AI-based privacy policy analyzer using Google's Gemini
  */
 class AIAnalyzer {
   constructor() {
-    // Determine which AI providers are available
+    // Check if Gemini is configured
     this.hasGemini = !!genAI;
-    this.hasOpenAI = !!openai;
     
-    if (!this.hasGemini && !this.hasOpenAI) {
-      logger.error('No AI providers configured. Set GEMINI_API_KEY or OPENAI_API_KEY in environment variables.');
+    if (!this.hasGemini) {
+      logger.error('Gemini API not configured. Set GEMINI_API_KEY in environment variables.');
     } else {
-      logger.info(`AI analyzer initialized with providers: ${[
-        this.hasGemini ? 'Gemini' : null,
-        this.hasOpenAI ? 'OpenAI' : null
-      ].filter(Boolean).join(', ')}`);
+      logger.info('Gemini AI analyzer initialized successfully');
     }
-    
-    // Default provider preference
-    this.preferredProvider = process.env.PREFERRED_AI_PROVIDER || 'gemini';
   }
   
   /**
-   * Analyze a privacy policy using available AI providers
+   * Analyze a privacy policy using Gemini
    */
   async analyzePrivacyPolicy(policyData) {
-    logger.info(`Starting AI analysis for ${policyData.url}`);
+    logger.info(`Starting Gemini analysis for ${policyData.url}`);
     const startTime = Date.now();
     
     try {
+      // Verify Gemini is available
+      if (!this.hasGemini) {
+        throw new Error('Gemini API key not configured');
+      }
+      
       // Check cache first
       const cacheKey = `policy_analysis_${policyData.url}`;
       const cachedAnalysis = await cache.get(cacheKey);
@@ -52,53 +45,17 @@ class AIAnalyzer {
         return cachedAnalysis;
       }
       
-      // Determine which provider to use
-      let primaryProvider, fallbackProvider;
+      // Analyze with Gemini
+      logger.info(`Analyzing with Gemini`);
+      const result = await this.analyzeWithGemini(policyData);
       
-      if (this.preferredProvider === 'openai' && this.hasOpenAI) {
-        primaryProvider = 'openai';
-        fallbackProvider = this.hasGemini ? 'gemini' : null;
-      } else if (this.hasGemini) {
-        primaryProvider = 'gemini';
-        fallbackProvider = this.hasOpenAI ? 'openai' : null;
-      } else if (this.hasOpenAI) {
-        primaryProvider = 'openai';
-        fallbackProvider = null;
-      } else {
-        throw new Error('No AI providers available for analysis');
-      }
+      // Cache successful result
+      await cache.set(cacheKey, result, 60 * 60 * 24 * 7); // Cache for 7 days
       
-      // Try with primary provider
-      try {
-        logger.info(`Analyzing with ${primaryProvider}`);
-        const result = await this.analyzeWithProvider(primaryProvider, policyData);
-        
-        // Cache successful result
-        await cache.set(cacheKey, result, 60 * 60 * 24 * 7); // Cache for 7 days
-        
-        const processingTime = Date.now() - startTime;
-        logger.info(`Analysis completed in ${processingTime}ms using ${primaryProvider}`);
-        
-        return result;
-      } catch (primaryError) {
-        logger.error(`Error with ${primaryProvider}:`, primaryError);
-        
-        // Try fallback if available
-        if (fallbackProvider) {
-          logger.info(`Falling back to ${fallbackProvider}`);
-          const result = await this.analyzeWithProvider(fallbackProvider, policyData);
-          
-          // Cache successful fallback result
-          await cache.set(cacheKey, result, 60 * 60 * 24 * 7);
-          
-          const processingTime = Date.now() - startTime;
-          logger.info(`Analysis completed with fallback in ${processingTime}ms using ${fallbackProvider}`);
-          
-          return result;
-        }
-        
-        throw primaryError;
-      }
+      const processingTime = Date.now() - startTime;
+      logger.info(`Analysis completed in ${processingTime}ms using Gemini`);
+      
+      return result;
     } catch (error) {
       const processingTime = Date.now() - startTime;
       logger.error(`Analysis failed after ${processingTime}ms:`, error);
@@ -107,25 +64,9 @@ class AIAnalyzer {
   }
   
   /**
-   * Analyze with a specific provider
-   */
-  async analyzeWithProvider(provider, policyData) {
-    if (provider === 'gemini') {
-      return this.analyzeWithGemini(policyData);
-    } else if (provider === 'openai') {
-      return this.analyzeWithOpenAI(policyData);
-    }
-    throw new Error(`Unknown provider: ${provider}`);
-  }
-  
-  /**
    * Analyze with Gemini
    */
   async analyzeWithGemini(policyData) {
-    if (!this.hasGemini) {
-      throw new Error('Gemini API key not configured');
-    }
-    
     const model = genAI.getGenerativeModel({ 
       model: "gemini-pro",
       safetySettings: [
@@ -165,41 +106,6 @@ class AIAnalyzer {
     } catch (error) {
       logger.error('Gemini API error:', error);
       throw new Error(`Gemini API error: ${error.message}`);
-    }
-  }
-  
-  /**
-   * Analyze with OpenAI
-   */
-  async analyzeWithOpenAI(policyData) {
-    if (!this.hasOpenAI) {
-      throw new Error('OpenAI API key not configured');
-    }
-    
-    // Prepare text
-    const maxTextLength = 30000;
-    const truncatedText = policyData.text.length > maxTextLength 
-      ? policyData.text.substring(0, maxTextLength) + "... [text truncated due to length]"
-      : policyData.text;
-    
-    const prompt = this.buildPrompt(policyData, truncatedText);
-    
-    try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          { role: "system", content: "You are a privacy policy analyst expert. Analyze the provided privacy policy and return a structured JSON response with key insights." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.1,
-        response_format: { type: "json_object" }
-      });
-      
-      const responseText = completion.choices[0].message.content;
-      return this.parseAIResponse(responseText);
-    } catch (error) {
-      logger.error('OpenAI API error:', error);
-      throw new Error(`OpenAI API error: ${error.message}`);
     }
   }
   

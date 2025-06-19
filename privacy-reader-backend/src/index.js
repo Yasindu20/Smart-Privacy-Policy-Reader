@@ -152,7 +152,7 @@ app.use('/api/proxy', proxyRoutes);
 app.use('/docs', express.static(path.join(__dirname, '../docs')));
 
 // Error handling middleware (must be last)
-app.use(errorHandler);
+app.use(errorHandler.errorHandler);
 
 // Start server with graceful shutdown
 const server = app.listen(PORT, () => {

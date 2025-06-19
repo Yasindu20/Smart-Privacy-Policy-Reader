@@ -405,7 +405,7 @@ const fetchWithPuppeteer = async (url) => {
     });
     
     // Wait a bit more for JavaScript execution
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Scroll down to load lazy content
     await autoScroll(page);

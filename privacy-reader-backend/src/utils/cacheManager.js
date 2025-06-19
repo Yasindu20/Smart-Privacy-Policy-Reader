@@ -12,7 +12,7 @@ class CacheManager {
   constructor() {
     // Initialize memory cache
     this.memoryCache = new NodeCache({
-      stdTTL: 3600, // Default TTL: 1 hour
+      stdTTL: 86400, // Default TTL: 24 hour
       checkperiod: 600, // Check for expired keys every 10 minutes
       useClones: false // For better performance
     });
